@@ -1,7 +1,9 @@
 services:
   - type: web
     name: grill-api
-    env: python
-    plan: free
+    runtime: python
     buildCommand: ""
-    startCommand: "python app.py"
+    startCommand: "gunicorn app:app"
+    envVars:
+      - key: PORT
+        value: 10000
