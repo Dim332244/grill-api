@@ -1,6 +1,8 @@
 from flask import Flask, request, jsonify, send_file
+from ultralytics import YOLO
 import os
 import cv2
+import numpy as np
 import uuid
 
 app = Flask(__name__)
@@ -10,9 +12,11 @@ PROCESSED_FOLDER = 'processed'
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 os.makedirs(PROCESSED_FOLDER, exist_ok=True)
 
+model = YOLO("yolov8n.pt")  # Pretrained YOLOv8 model
+
 @app.route('/')
 def home():
-    return "✅ Grill API is running!"
+    return "✅ Grill AI API is live!"
 
 @app.route('/upload', methods=['GET', 'POST'])
 def upload():
@@ -25,17 +29,17 @@ def upload():
         filepath = os.path.join(UPLOAD_FOLDER, filename)
         file.save(filepath)
 
-        # Process the image
+        # Detect and apply grill
         processed_path = process_image(filepath)
 
         return jsonify({
-            'message': 'Grill design applied successfully',
+            'message': 'Grill design applied',
             'processed_image_url': f"/processed/{os.path.basename(processed_path)}"
         })
 
-    # GET: show upload form
+    # GET form for manual upload
     return '''
-        <h2>Upload Grill Image</h2>
+        <h2>Upload House Image</h2>
         <form method="POST" enctype="multipart/form-data">
             <input type="file" name="file" required>
             <input type="submit" value="Upload">
@@ -47,34 +51,25 @@ def serve_processed_image(filename):
     path = os.path.join(PROCESSED_FOLDER, filename)
     return send_file(path, mimetype='image/jpeg')
 
-def process_image(filepath):
-    image = cv2.imread(filepath)
-    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-    edges = cv2.Canny(gray, 50, 150)
+def process_image(image_path):
+    image = cv2.imread(image_path)
+    results = model(image)[0]
 
-    # Find contours (simulate window/door detection)
-    contours, _ = cv2.findContours(edges, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+    for box in results.boxes:
+        cls = int(box.cls[0])
+        name = model.names[cls]
+        if name.lower() in ['window', 'door', 'building']:  # Optional: 'balcony' if trained
+            x1, y1, x2, y2 = map(int, box.xyxy[0])
+            region = image[y1:y2, x1:x2]
 
-    for cnt in contours:
-        approx = cv2.approxPolyDP(cnt, 0.02*cv2.arcLength(cnt, True), True)
-        if len(approx) == 4 and cv2.contourArea(cnt) > 5000:
-            x, y, w, h = cv2.boundingRect(cnt)
-
-            # Draw simulated grill (vertical + horizontal lines)
+            # Apply grill lines (simple crossbars)
             for i in range(1, 4):
-                cv2.line(image, (x + i*w//4, y), (x + i*w//4, y + h), (0, 255, 0), 2)
-                cv2.line(image, (x, y + i*h//4), (x + w, y + i*h//4), (0, 255, 0), 2)
+                cv2.line(image, (x1 + i*(x2 - x1)//4, y1), (x1 + i*(x2 - x1)//4, y2), (0, 255, 0), 2)
+                cv2.line(image, (x1, y1 + i*(y2 - y1)//4), (x2, y1 + i*(y2 - y1)//4), (0, 255, 0), 2)
 
-
-    from ultralytics import YOLO
-
-model = YOLO("yolov8n.pt")  # Pretrained model (person, car, door, window, etc.)
-
-
-    # Save processed image
-    processed_path = os.path.join(PROCESSED_FOLDER, f"processed_{os.path.basename(filepath)}")
+    processed_path = os.path.join(PROCESSED_FOLDER, f"processed_{os.path.basename(image_path)}")
     cv2.imwrite(processed_path, image)
     return processed_path
 
 if __name__ == '__main__':
-    app.run()
+    app.run(debug=True)
