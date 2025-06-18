@@ -11,8 +11,8 @@ UPLOAD_FOLDER = 'uploads'
 PROCESSED_FOLDER = 'processed'
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 os.makedirs(PROCESSED_FOLDER, exist_ok=True)
+model = YOLO("yolov8n.pt")
 
-model = YOLO("yolov8n.onnx")  # Lightweight YOLOv8
 
 
 @app.route('/')
