@@ -1,9 +1,9 @@
 services:
   - type: web
-    name: grill-api
+    name: grill-ai-api
     runtime: python
     buildCommand: ""
-    startCommand: "gunicorn app:app"
+    startCommand: python app.py
     envVars:
-      - key: PORT
-        value: 10000
+      - key: FLASK_ENV
+        value: production
