@@ -3,5 +3,4 @@ gunicorn
 pillow
 opencv-python
 ultralytics
-opencv-python
-nump
+numpy
