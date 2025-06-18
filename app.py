@@ -65,6 +65,12 @@ def process_image(filepath):
                 cv2.line(image, (x + i*w//4, y), (x + i*w//4, y + h), (0, 255, 0), 2)
                 cv2.line(image, (x, y + i*h//4), (x + w, y + i*h//4), (0, 255, 0), 2)
 
+
+    from ultralytics import YOLO
+
+model = YOLO("yolov8n.pt")  # Pretrained model (person, car, door, window, etc.)
+
+
     # Save processed image
     processed_path = os.path.join(PROCESSED_FOLDER, f"processed_{os.path.basename(filepath)}")
     cv2.imwrite(processed_path, image)
